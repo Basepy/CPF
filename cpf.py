@@ -50,14 +50,80 @@ def validaCPF(cpf):
     return resto1 == int(cpf[9]) and resto2 == int(cpf[10])
 
 
+def validar_cnpj(documento):
+    """Valida um CNPJ (com ou sem máscara), retornando True/False."""
+    # 1. Limpa: mantém só dígitos
+    cnpj = ''.join(filter(str.isdigit, str(documento)))
+
+    # 2. Checa tamanho ANTES de qualquer acesso a índice
+    if len(cnpj) != 14:
+        return False
+
+    # 3. Rejeita dígitos todos iguais (000..., 111..., etc.)
+    if len(set(cnpj)) == 1:
+        return False
+
+    # 4. Validação matemática dos dígitos verificadores
+    pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+    soma1 = sum(int(cnpj[i]) * pesos1[i] for i in range(12))
+    resto1 = soma1 % 11
+    dv1 = 0 if resto1 < 2 else 11 - resto1
+
+    soma2 = sum(int(cnpj[i]) * pesos2[i] for i in range(13))
+    resto2 = soma2 % 11
+    dv2 = 0 if resto2 < 2 else 11 - resto2
+
+    return dv1 == int(cnpj[12]) and dv2 == int(cnpj[13])
+
+
+def validar_cpf_cnpj(documento):
+    """Valida um documento que pode ser CPF (11 dígitos) ou CNPJ (14 dígitos).
+
+    Aceita o valor com ou sem máscara (pontuação) e retorna True/False.
+    """
+    # Limpa tudo que não for número
+    documento = ''.join(filter(str.isdigit, str(documento)))
+
+    if len(documento) == 11:
+        return validaCPF(documento)      # Já retorna True/False
+    elif len(documento) == 14:
+        return validar_cnpj(documento)   # Já retorna True/False
+
+    return False  # Qualquer outra coisa é inválido
+
+
 # --- Testes ---
 if __name__ == "__main__":
-    testes = [
+    testes_cpf = [
         "123.456.789-09",   # fake conhecido -> False
         "111.111.111-11",   # todos iguais -> False
         "123.456.789",      # tamanho errado -> False
         "012.345.678-90",   # sequência óbvia -> False
         "529.982.247-25",   # válido de verdade -> True
     ]
-    for t in testes:
-        print(f"{t} -> {validaCPF(t)}")
+    for t in testes_cpf:
+        print(f"CPF  {t} -> {validaCPF(t)}")
+
+    testes_cnpj = [
+        "11.222.333/0001-81",   # válido de verdade -> True
+        "11222333000181",       # válido sem máscara -> True
+        "04.252.011/0001-10",   # válido de verdade -> True
+        "11.222.333/0001-00",   # dígito verificador errado -> False
+        "11111111111111",       # todos iguais -> False
+        "11.222.333/0001",      # tamanho errado -> False
+    ]
+    for t in testes_cnpj:
+        print(f"CNPJ {t} -> {validar_cnpj(t)}")
+
+    print("--- validar_cpf_cnpj ---")
+    mistos = [
+        "529.982.247-25",       # CPF válido -> True
+        "111.111.111-11",       # CPF inválido -> False
+        "11.222.333/0001-81",   # CNPJ válido -> True
+        "11.222.333/0001-00",   # CNPJ inválido -> False
+        "123",                  # tamanho inválido -> False
+    ]
+    for t in mistos:
+        print(f"{t} -> {validar_cpf_cnpj(t)}")
